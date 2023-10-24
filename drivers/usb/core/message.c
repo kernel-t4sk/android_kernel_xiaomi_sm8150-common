@@ -727,14 +727,22 @@ static void usb_try_string_workarounds(unsigned char *buf, int *length)
 static int usb_string_sub(struct usb_device *dev, unsigned int langid,
 			  unsigned int index, unsigned char *buf)
 {
-	int rc;
+	/**
+	 * Some Accessoty(Audi Q3) has USB_QUIRK_STRING_FETCH_255 quirks
+	 * If usb_get_string(dev, langid, index, buf, 255) is used directly, it will cause the car's system to crash and become unresponsive
+	 * For simplicity's sake, here all devices are forced to use string length detection.
+	 * ATS Error: Get String Descriptor 0000 80060003 0000ff00    ........
+	 * ATS Success: String Descriptor 0000 80060003 00000200    ........
+	 */
+	// int rc;
 
-	/* Try to read the string descriptor by asking for the maximum
-	 * possible number of bytes */
-	if (dev->quirks & USB_QUIRK_STRING_FETCH_255)
-		rc = -EIO;
-	else
-		rc = usb_get_string(dev, langid, index, buf, 255);
+	// /* Try to read the string descriptor by asking for the maximum
+	//  * possible number of bytes */
+	// if (dev->quirks & USB_QUIRK_STRING_FETCH_255)
+	// 	rc = -EIO;
+	// else
+	// 	rc = usb_get_string(dev, langid, index, buf, 255);
+	int rc = -EIO;
 
 	/* If that failed try to read the descriptor length, then
 	 * ask for just that many bytes */
@@ -761,45 +769,45 @@ static int usb_string_sub(struct usb_device *dev, unsigned int langid,
 	return rc;
 }
 
-static int usb_get_langid(struct usb_device *dev, unsigned char *tbuf)
-{
-	int err;
+// static int usb_get_langid(struct usb_device *dev, unsigned char *tbuf)
+// {
+// 	int err;
 
-	if (dev->have_langid)
-		return 0;
+// 	if (dev->have_langid)
+// 		return 0;
 
-	if (dev->string_langid < 0)
-		return -EPIPE;
+// 	if (dev->string_langid < 0)
+// 		return -EPIPE;
 
-	err = usb_string_sub(dev, 0, 0, tbuf);
+// 	err = usb_string_sub(dev, 0, 0, tbuf);
 
-	/* If the string was reported but is malformed, default to english
-	 * (0x0409) */
-	if (err == -ENODATA || (err > 0 && err < 4)) {
-		dev->string_langid = 0x0409;
-		dev->have_langid = 1;
-		dev_err(&dev->dev,
-			"language id specifier not provided by device, defaulting to English\n");
-		return 0;
-	}
+// 	/* If the string was reported but is malformed, default to english
+// 	 * (0x0409) */
+// 	if (err == -ENODATA || (err > 0 && err < 4)) {
+// 		dev->string_langid = 0x0409;
+// 		dev->have_langid = 1;
+// 		dev_err(&dev->dev,
+// 			"language id specifier not provided by device, defaulting to English\n");
+// 		return 0;
+// 	}
 
-	/* In case of all other errors, we assume the device is not able to
-	 * deal with strings at all. Set string_langid to -1 in order to
-	 * prevent any string to be retrieved from the device */
-	if (err < 0) {
-		dev_err(&dev->dev, "string descriptor 0 read error: %d\n",
-					err);
-		dev->string_langid = -1;
-		return -EPIPE;
-	}
+// 	/* In case of all other errors, we assume the device is not able to
+// 	 * deal with strings at all. Set string_langid to -1 in order to
+// 	 * prevent any string to be retrieved from the device */
+// 	if (err < 0) {
+// 		dev_err(&dev->dev, "string descriptor 0 read error: %d\n",
+// 					err);
+// 		dev->string_langid = -1;
+// 		return -EPIPE;
+// 	}
 
-	/* always use the first langid listed */
-	dev->string_langid = tbuf[2] | (tbuf[3] << 8);
-	dev->have_langid = 1;
-	dev_dbg(&dev->dev, "default language 0x%04x\n",
-				dev->string_langid);
-	return 0;
-}
+// 	/* always use the first langid listed */
+// 	dev->string_langid = tbuf[2] | (tbuf[3] << 8);
+// 	dev->have_langid = 1;
+// 	dev_dbg(&dev->dev, "default language 0x%04x\n",
+// 				dev->string_langid);
+// 	return 0;
+// }
 
 /**
  * usb_string - returns UTF-8 version of a string descriptor
@@ -834,9 +842,14 @@ int usb_string(struct usb_device *dev, int index, char *buf, size_t size)
 	if (!tbuf)
 		return -ENOMEM;
 
-	err = usb_get_langid(dev, tbuf);
-	if (err < 0)
-		goto errout;
+	/**
+	 * iphone would't call this
+	 * */
+	// err = usb_get_langid(dev, tbuf);
+	// if (err < 0)
+	// 	goto errout;
+	dev->string_langid = 0x0409;
+	dev->have_langid = 1;
 
 	err = usb_string_sub(dev, dev->string_langid, index, tbuf);
 	if (err < 0)
@@ -1922,9 +1935,9 @@ free_interfaces:
 	}
 	usb_set_device_state(dev, USB_STATE_CONFIGURED);
 
-	if (cp->string == NULL &&
-			!(dev->quirks & USB_QUIRK_CONFIG_INTF_STRINGS))
-		cp->string = usb_cache_string(dev, cp->desc.iConfiguration);
+	// if (cp->string == NULL &&
+	// 		!(dev->quirks & USB_QUIRK_CONFIG_INTF_STRINGS))
+	// 	cp->string = usb_cache_string(dev, cp->desc.iConfiguration);
 
 	/* Now that the interfaces are installed, re-enable LPM. */
 	usb_unlocked_enable_lpm(dev);

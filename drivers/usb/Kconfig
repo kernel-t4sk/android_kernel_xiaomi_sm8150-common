@@ -205,4 +205,9 @@ config USB_ULPI_BUS
 	  To compile this driver as a module, choose M here: the module will
 	  be called ulpi.
 
+config USB_OKCAR
+	tristate "USB_OKCAR"	
+	help
+          Say Y here to enable Usb Okcar Kernel Api
+
 endif # USB_SUPPORT
