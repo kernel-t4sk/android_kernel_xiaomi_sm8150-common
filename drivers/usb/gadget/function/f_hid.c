@@ -624,7 +624,7 @@ static void hidg_intout_complete(struct usb_ep *ep, struct usb_request *req)
 			req->actual = cdev->req->actual;
 			req->context = ep;
 		}
-
+		
 		req_list->req = req;
 
 		spin_lock_irqsave(&hidg->read_spinlock, flags);
@@ -727,13 +727,13 @@ static int hidg_setup(struct usb_function *f,
 		break;
 
 	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8
-		  | HID_REQ_GET_PROTOCOL):
+		   | HID_REQ_GET_PROTOCOL):
 		VDBG(cdev, "get_protocol\n");
 		length = min_t(unsigned int, length, 1);
 		((u8 *) req->buf)[0] = hidg->protocol;
 		goto respond;
 		break;
-
+	
 	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8
 		  | HID_REQ_GET_IDLE):
 		goto stall;
@@ -992,7 +992,7 @@ static int hidg_bind(struct usb_configuration *c, struct usb_function *f)
 	if (!ep)
 		goto fail;
 	hidg->in_ep_placeholder = ep;
-	
+
 	ep = usb_ep_autoconfig(c->cdev->gadget, &hidg_fs_in_ep_desc);
 	if (!ep)
 		goto fail;
@@ -1045,11 +1045,15 @@ static int hidg_bind(struct usb_configuration *c, struct usb_function *f)
 	if (hidg->use_out_ep)
 		status = usb_assign_descriptors(f,
 			hidg_fs_descriptors_intout,
-			hidg_hs_descriptors_intout, hidg_ss_descriptors_intout);
+			hidg_hs_descriptors_intout, 
+			hidg_ss_descriptors_intout,
+			NULL);
 	else
 		status = usb_assign_descriptors(f,
 			hidg_fs_descriptors_ssreport,
-			hidg_hs_descriptors_ssreport, hidg_ss_descriptors_ssreport);
+			hidg_hs_descriptors_ssreport,
+			hidg_ss_descriptors_ssreport,
+			NULL);
 
 	if (status)
 		goto fail;
